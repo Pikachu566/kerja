@@ -33,20 +33,20 @@
       margin-top: 20px;
       display: none;
     }
-    input[type="number"] {
+    input[type="number"], input[type="text"], select {
       background-color: #222;
       color: #fff;
       border: 1px solid #555;
       padding: 5px;
     }
     .kosTolak { color: #ff7043; }
-
+    label { margin-right: 10px; }
     @media print {
       body { background-color: #fff; color: #000; font-size: 12px; padding: 10px; }
       table { width: 100%; border-collapse: collapse; }
       th, td { border: 1px solid #000; padding: 8px; text-align: center; }
       th { background-color: #f0f0f0; color: #333; }
-      .button, .notification { display: none; }
+      .button, .notification, select, label { display: none; }
       .summary { border: none; background: none; padding: 0; }
     }
   </style>
@@ -54,6 +54,35 @@
 <body>
 
 <h2>Kiraan Jualan Harian (Sebulan)</h2>
+<label for="bulanSelect">Bulan:</label>
+<select id="bulanSelect" onchange="generateTable()">
+  <option value="0">Januari</option>
+  <option value="1">Februari</option>
+  <option value="2">Mac</option>
+  <option value="3">April</option>
+  <option value="4">Mei</option>
+  <option value="5">Jun</option>
+  <option value="6">Julai</option>
+  <option value="7">Ogos</option>
+  <option value="8">September</option>
+  <option value="9">Oktober</option>
+  <option value="10">November</option>
+  <option value="11">Disember</option>
+</select>
+
+<label for="tahunSelect">Tahun:</label>
+<select id="tahunSelect" onchange="generateTable()">
+  <script>
+    for (let y = 2025; y <= 2050; y++) {
+      document.write(`<option value="${y}">${y}</option>`);
+    }
+  </script>
+</select>
+<br><br>
+
+<label for="gajiPercent">Peratus Gaji (%): </label>
+<input type="number" id="gajiPercent" value="20" step="0.01" min="0" max="100" />
+
 <table>
   <thead>
     <tr>
@@ -74,15 +103,30 @@
   <h3>Resit Kiraan Bulanan</h3>
   <p><strong>Total Jualan:</strong> RM <span id="totalJualan"></span></p>
   <p><strong>Total Kos:</strong> RM <span id="totalKos"></span></p>
-  <p><strong>20% Gaji:</strong> RM <span id="tolakGaji"></span></p>
+  <p><strong>Gaji (<span id="gajiRate">20</span>%):</strong> RM <span id="tolakGaji"></span></p>
   <p><strong>Balance Bersih:</strong> RM <span id="balanceBersih"></span></p>
   <p><strong>Hari Bekerja:</strong> <span id="hariBekerja"></span></p>
   <p><strong>Tarikh Hari Ini:</strong> <span id="currentDate"></span></p>
+  <p><strong>Jam Semasa:</strong> <span id="currentTime"></span></p>
 </div>
 
 <div class="notification" id="successNotif">PDF berjaya dimuat turun!</div>
 
 <script>
+  // Update time on the webpage and in the receipt
+  function updateTime() {
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    const currentTime = `${hours}:${minutes}:${seconds}`;
+    
+    document.getElementById('currentTime').textContent = currentTime;
+    setTimeout(updateTime, 1000); // Update the time every second
+  }
+  
+  updateTime(); // Start updating time immediately
+
   const dataRows = document.getElementById('dataRows');
   for (let i = 0; i < 31; i++) {
     const haribulan = `${i + 1} Haribulan`;
@@ -112,7 +156,8 @@
       totalJualan += jualan;
       totalKos += kos;
     }
-    const tolakGaji = totalJualan * 0.2;
+    const gajiPercent = parseFloat(document.getElementById('gajiPercent').value) || 0;
+    const tolakGaji = totalJualan * (gajiPercent / 100);
     const balanceBersih = totalJualan - tolakGaji - totalKos;
 
     document.getElementById('totalJualan').textContent = totalJualan.toFixed(2);
@@ -120,11 +165,30 @@
     document.getElementById('tolakGaji').textContent = tolakGaji.toFixed(2);
     document.getElementById('balanceBersih').textContent = balanceBersih.toFixed(2);
     document.getElementById('hariBekerja').textContent = `${hariKerja}/31 hari`;
+    document.getElementById('gajiRate').textContent = gajiPercent.toFixed(2);
 
     const now = new Date();
     const dateStr = now.toLocaleDateString('ms-MY', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     document.getElementById('currentDate').textContent = dateStr;
     document.getElementById('summary').style.display = 'block';
+  }
+
+  function exportToExcel() {
+    const wb = XLSX.utils.book_new();
+    const ws_data = [
+      ["Hari", "Jualan (RM)", "Kos (RM)", "Selepas Tolak (RM)"]
+    ];
+
+    for (let i = 1; i <= 31; i++) {
+      const jualan = parseFloat(document.getElementById(`jualan${i}`).value) || 0;
+      const kos = parseFloat(document.getElementById(`kos${i}`).value) || 0;
+      const selepasTolak = jualan - kos;
+      ws_data.push([`${i} Haribulan`, jualan.toFixed(2), kos.toFixed(2), selepasTolak.toFixed(2)]);
+    }
+
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+    XLSX.utils.book_append_sheet(wb, ws, "Jualan Bulanan");
+    XLSX.writeFile(wb, "data-jualan.xlsx");
   }
 
   function downloadPDF() {
@@ -136,7 +200,9 @@
     const tolakGaji = document.getElementById('tolakGaji').textContent;
     const balanceBersih = document.getElementById('balanceBersih').textContent;
     const currentDate = document.getElementById('currentDate').textContent;
+    const currentTime = document.getElementById('currentTime').textContent;
     const hariBekerja = document.getElementById('hariBekerja').textContent;
+    const gajiPercent = document.getElementById('gajiRate').textContent;
 
     doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
@@ -145,13 +211,14 @@
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
     doc.text(`Tarikh Hari Ini: ${currentDate}`, 15, 25);
-    doc.text(`Hari Bekerja: ${hariBekerja}`, 15, 31);
-    doc.text(`Total Jualan: RM ${totalJualan}`, 15, 37);
-    doc.text(`Total Kos: RM ${totalKos}`, 15, 43);
-    doc.text(`20% Gaji: RM ${tolakGaji}`, 15, 49);
-    doc.text(`Balance Bersih: RM ${balanceBersih}`, 15, 55);
+    doc.text(`Jam Semasa: ${currentTime}`, 15, 31);
+    doc.text(`Hari Bekerja: ${hariBekerja}`, 15, 37);
+    doc.text(`Total Jualan: RM ${totalJualan}`, 15, 43);
+    doc.text(`Total Kos: RM ${totalKos}`, 15, 49);
+    doc.text(`Gaji (${gajiPercent}%): RM ${tolakGaji}`, 15, 55);
+    doc.text(`Balance Bersih: RM ${balanceBersih}`, 15, 61);
 
-    let y = 65;
+    let y = 70;
     const colX = [15, 60, 105, 150];
     const colWidth = [45, 45, 45, 45];
     const rowHeight = 6;
@@ -166,41 +233,37 @@
     y += rowHeight;
 
     doc.setTextColor(0, 0, 0);
+
     for (let i = 1; i <= 31; i++) {
       const jualan = document.getElementById(`jualan${i}`).value || "0.00";
       const kos = document.getElementById(`kos${i}`).value || "0.00";
       const jumlahSelepasTolak = (parseFloat(jualan) - parseFloat(kos)).toFixed(2);
-      const haribulan = `${i} Haribulan`;
 
-      for (let j = 0; j < 4; j++) doc.rect(colX[j], y, colWidth[j], rowHeight);
-      doc.text(haribulan, colX[0] + 2, y + 4);
+      for (let j = 0; j < 4; j++) {
+        doc.rect(colX[j], y, colWidth[j], rowHeight);
+      }
+
+      doc.text(`${i} Haribulan`, colX[0] + 2, y + 4);
       doc.text(jualan, colX[1] + 2, y + 4);
       doc.text(kos, colX[2] + 2, y + 4);
       doc.text(jumlahSelepasTolak, colX[3] + 2, y + 4);
-      y += rowHeight;
 
-      if (y > 275) { doc.addPage(); y = 15; }
+      y += rowHeight;
+      if (y > 275) {
+        doc.addPage();
+        y = 15;
+      }
     }
 
-    doc.save("resit-jualan.pdf");
+    const today = new Date();
+    const formattedDate = `${String(today.getDate()).padStart(2, '0')}-${String(today.getMonth() + 1).padStart(2, '0')}-${today.getFullYear()}`;
+    doc.save(`resit-jualan-${formattedDate}.pdf`);
+
     const notif = document.getElementById('successNotif');
     notif.style.display = 'block';
-    setTimeout(() => notif.style.display = 'none', 3000);
-  }
-
-  function exportToExcel() {
-    let data = [];
-    for (let i = 1; i <= 31; i++) {
-      const jualan = parseFloat(document.getElementById(`jualan${i}`).value) || 0;
-      const kos = parseFloat(document.getElementById(`kos${i}`).value) || 0;
-      const jumlahSelepasTolak = jualan - kos;
-      data.push([`${i} Haribulan`, jualan.toFixed(2), kos.toFixed(2), jumlahSelepasTolak.toFixed(2)]);
-    }
-
-    const ws = XLSX.utils.aoa_to_sheet([["Hari", "Jumlah Jualan (RM)", "Jumlah Kos (RM)", "Jumlah Selepas Tolak (RM)"], ...data]);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Jualan Bulanan");
-    XLSX.writeFile(wb, "kiraan_jualan.xlsx");
+    setTimeout(() => {
+      notif.style.display = 'none';
+    }, 3000);
   }
 </script>
 
