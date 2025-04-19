@@ -98,6 +98,9 @@
 <button class="button" onclick="calculateMonthly()">Kira Semua</button>
 <button class="button" onclick="downloadPDF()">Muat Turun Resit PDF</button>
 <button class="button" onclick="exportToExcel()">Eksport ke Excel</button>
+<button class="button" onclick="saveData()">💾 Simpan Data</button>
+<button class="button" onclick="resetData()">🧹 Reset Data</button>
+
 
 <div class="summary" id="summary" style="display:none">
   <h3>Resit Kiraan Bulanan</h3>
@@ -206,7 +209,7 @@
 
     doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
-    doc.text("Resit Kiraan Jualan Bulanan", 105, 15, null, null, 'center');
+    doc.text("Resit Kiraan Jualan Bulanan (Pasar Sejahtera Tg Piandang)", 105, 15, null, null, 'center');
 
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
@@ -265,7 +268,45 @@
       notif.style.display = 'none';
     }, 3000);
   }
+
+  // Auto-load data dari localStorage bila page buka
+  window.onload = function () {
+    const savedData = JSON.parse(localStorage.getItem('jualanData')) || {};
+    for (let i = 1; i <= 31; i++) {
+      if (savedData[`jualan${i}`]) document.getElementById(`jualan${i}`).value = savedData[`jualan${i}`];
+      if (savedData[`kos${i}`]) {
+        document.getElementById(`kos${i}`).value = savedData[`kos${i}`];
+        updateKosTolak(i);
+      }
+    }
+  };
+
+  // Fungsi Simpan
+  function saveData() {
+    let data = {};
+    for (let i = 1; i <= 31; i++) {
+      data[`jualan${i}`] = document.getElementById(`jualan${i}`).value;
+      data[`kos${i}`] = document.getElementById(`kos${i}`).value;
+    }
+    localStorage.setItem('jualanData', JSON.stringify(data));
+    alert('✅ Data berjaya disimpan!');
+  }
+
+  // Fungsi Reset
+  function resetData() {
+    if (confirm("Padam semua data?")) {
+      localStorage.removeItem('jualanData');
+      for (let i = 1; i <= 31; i++) {
+        document.getElementById(`jualan${i}`).value = '';
+        document.getElementById(`kos${i}`).value = '';
+        updateKosTolak(i);
+      }
+      document.getElementById('summary').style.display = 'none';
+      alert('🧹 Data telah dipadam.');
+    }
+  }
 </script>
+
 
 </body>
 </html>
