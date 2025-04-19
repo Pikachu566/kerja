@@ -5,29 +5,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Kiraan Jualan Bulanan</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.4/xlsx.full.min.js"></script> <!-- SheetJS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.4/xlsx.full.min.js"></script>
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; background: #121212; color: #e0e0e0; }
     table { border-collapse: collapse; width: 100%; color: #e0e0e0; }
     th, td { border: 1px solid #444; padding: 8px; text-align: center; }
     th { background-color: #222; color: #6ec6ff; }
-    .cuti { background-color: #3e2723; }
     .button { 
       margin-top: 20px; 
       padding: 10px 20px; 
-      background-color: #1e40ff; /* Butang warna biru gelap */
+      background-color: #1e40ff;
       color: white; 
       border: none; 
       cursor: pointer; 
       border-radius: 5px; 
       transition: background-color 0.3s ease;
     }
-    .button:hover {
-      background-color: #2979ff; /* Biru lebih terang semasa hover */
-    }
-    .button:active { 
-      background-color: #1e40ff; /* Warna biru terang semasa tekan */
-    }
+    .button:hover { background-color: #2979ff; }
+    .button:active { background-color: #1e40ff; }
     .summary { background: #1e1e1e; padding: 15px; margin-top: 20px; border-radius: 8px; border: 1px solid #333; }
     .notification {
       background-color: #2e7d32;
@@ -44,39 +39,15 @@
       border: 1px solid #555;
       padding: 5px;
     }
-    .kosTolak {
-      color: #ff7043; /* Warna untuk jumlah tolak */
-    }
+    .kosTolak { color: #ff7043; }
 
-    /* Styling for Print */
     @media print {
-      body {
-        background-color: #fff; 
-        color: #000; 
-        font-size: 12px;
-        padding: 10px;
-      }
-      table {
-        width: 100%; 
-        border-collapse: collapse;
-      }
-      th, td {
-        border: 1px solid #000; 
-        padding: 8px;
-        text-align: center;
-      }
-      th {
-        background-color: #f0f0f0;
-        color: #333;
-      }
-      .button, .notification {
-        display: none; 
-      }
-      .summary {
-        border: none; 
-        background: none; 
-        padding: 0;
-      }
+      body { background-color: #fff; color: #000; font-size: 12px; padding: 10px; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border: 1px solid #000; padding: 8px; text-align: center; }
+      th { background-color: #f0f0f0; color: #333; }
+      .button, .notification { display: none; }
+      .summary { border: none; background: none; padding: 0; }
     }
   </style>
 </head>
@@ -112,15 +83,12 @@
 <div class="notification" id="successNotif">PDF berjaya dimuat turun!</div>
 
 <script>
-  const hariMinggu = ["Isnin", "Selasa", "Rabu", "Khamis", "Jumaat", "Sabtu", "Ahad"];
   const dataRows = document.getElementById('dataRows');
-
   for (let i = 0; i < 31; i++) {
-    const hari = hariMinggu[i % 7];
-    const cutiClass = (hari === "Ahad" || hari === "Rabu") ? 'cuti' : '';
+    const haribulan = `${i + 1} Haribulan`;
     dataRows.innerHTML += `
-      <tr class="${cutiClass}">
-        <td>${hari} (Hari ${i + 1})</td>
+      <tr>
+        <td>${haribulan}</td>
         <td><input type="number" step="0.01" id="jualan${i + 1}" /></td>
         <td><input type="number" step="0.01" id="kos${i + 1}" oninput="updateKosTolak(${i + 1})" /></td>
         <td><span id="kosTolak${i + 1}" class="kosTolak">0.00</span></td>
@@ -131,15 +99,12 @@
   function updateKosTolak(i) {
     const jualan = parseFloat(document.getElementById(`jualan${i}`).value) || 0;
     const kos = parseFloat(document.getElementById(`kos${i}`).value) || 0;
-    const jumlahSelepasTolak = jualan - kos;  // Kirakan jumlah selepas tolak
+    const jumlahSelepasTolak = jualan - kos;
     document.getElementById(`kosTolak${i}`).textContent = jumlahSelepasTolak.toFixed(2);
   }
 
   function calculateMonthly() {
-    let totalJualan = 0;
-    let totalKos = 0;
-    let hariKerja = 0;
-
+    let totalJualan = 0, totalKos = 0, hariKerja = 0;
     for (let i = 1; i <= 31; i++) {
       const jualan = parseFloat(document.getElementById(`jualan${i}`).value) || 0;
       const kos = parseFloat(document.getElementById(`kos${i}`).value) || 0;
@@ -147,8 +112,7 @@
       totalJualan += jualan;
       totalKos += kos;
     }
-
-    const tolakGaji = totalJualan * 0.2; // Ini adalah bahagian yang mengira 20%
+    const tolakGaji = totalJualan * 0.2;
     const balanceBersih = totalJualan - tolakGaji - totalKos;
 
     document.getElementById('totalJualan').textContent = totalJualan.toFixed(2);
@@ -160,98 +124,77 @@
     const now = new Date();
     const dateStr = now.toLocaleDateString('ms-MY', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     document.getElementById('currentDate').textContent = dateStr;
-
     document.getElementById('summary').style.display = 'block';
   }
 
-function downloadPDF() {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  function downloadPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
-  const totalJualan = document.getElementById('totalJualan').textContent;
-  const totalKos = document.getElementById('totalKos').textContent;
-  const tolakGaji = document.getElementById('tolakGaji').textContent;
-  const balanceBersih = document.getElementById('balanceBersih').textContent;
-  const currentDate = document.getElementById('currentDate').textContent;
-  const hariBekerja = document.getElementById('hariBekerja').textContent;
+    const totalJualan = document.getElementById('totalJualan').textContent;
+    const totalKos = document.getElementById('totalKos').textContent;
+    const tolakGaji = document.getElementById('tolakGaji').textContent;
+    const balanceBersih = document.getElementById('balanceBersih').textContent;
+    const currentDate = document.getElementById('currentDate').textContent;
+    const hariBekerja = document.getElementById('hariBekerja').textContent;
 
-  // Tajuk utama center
-  doc.setFontSize(14);
-  doc.setFont("helvetica", "bold");
-  doc.text("Resit Kiraan Jualan Bulanan", 105, 15, null, null, 'center');
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("Resit Kiraan Jualan Bulanan", 105, 15, null, null, 'center');
 
-  // Info ringkasan
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
-  doc.text(`Tarikh Hari Ini: ${currentDate}`, 15, 25);
-  doc.text(`Hari Bekerja: ${hariBekerja}`, 15, 31);
-  doc.text(`Total Jualan: RM ${totalJualan}`, 15, 37);
-  doc.text(`Total Kos: RM ${totalKos}`, 15, 43);
-  doc.text(`20% Gaji: RM ${tolakGaji}`, 15, 49);
-  doc.text(`Balance Bersih: RM ${balanceBersih}`, 15, 55);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Tarikh Hari Ini: ${currentDate}`, 15, 25);
+    doc.text(`Hari Bekerja: ${hariBekerja}`, 15, 31);
+    doc.text(`Total Jualan: RM ${totalJualan}`, 15, 37);
+    doc.text(`Total Kos: RM ${totalKos}`, 15, 43);
+    doc.text(`20% Gaji: RM ${tolakGaji}`, 15, 49);
+    doc.text(`Balance Bersih: RM ${balanceBersih}`, 15, 55);
 
-  // Perincian harian (jadual)
-  let y = 65;
-  const colX = [15, 60, 105, 150]; // Kedudukan lajur
-  const colWidth = [45, 45, 45, 45]; // Saiz lajur
-  const rowHeight = 6;
+    let y = 65;
+    const colX = [15, 60, 105, 150];
+    const colWidth = [45, 45, 45, 45];
+    const rowHeight = 6;
 
-  // Header jadual
-  doc.setFillColor(33, 150, 243); // biru
-  doc.setTextColor(255, 255, 255); // putih
-  doc.rect(colX[0], y, 180, rowHeight, 'F'); // kotak header penuh
-  doc.text("Hari", colX[0] + 2, y + 4);
-  doc.text("Jualan (RM)", colX[1] + 2, y + 4);
-  doc.text("Kos (RM)", colX[2] + 2, y + 4);
-  doc.text("Tolak (RM)", colX[3] + 2, y + 4);
-  y += rowHeight;
-
-  doc.setTextColor(0, 0, 0); // hitam balik
-
-  for (let i = 1; i <= 31; i++) {
-    const jualan = document.getElementById(`jualan${i}`).value || "0.00";
-    const kos = document.getElementById(`kos${i}`).value || "0.00";
-    const jumlahSelepasTolak = (parseFloat(jualan) - parseFloat(kos)).toFixed(2);
-    const hari = hariMinggu[(i - 1) % 7];
-
-    // Garis kotak row
-    for (let j = 0; j < 4; j++) {
-      doc.rect(colX[j], y, colWidth[j], rowHeight);
-    }
-
-    // Isi teks
-    doc.text(`${hari} (${i})`, colX[0] + 2, y + 4);
-    doc.text(jualan, colX[1] + 2, y + 4);
-    doc.text(kos, colX[2] + 2, y + 4);
-    doc.text(jumlahSelepasTolak, colX[3] + 2, y + 4);
-
+    doc.setFillColor(33, 150, 243);
+    doc.setTextColor(255, 255, 255);
+    doc.rect(colX[0], y, 180, rowHeight, 'F');
+    doc.text("Hari", colX[0] + 2, y + 4);
+    doc.text("Jualan (RM)", colX[1] + 2, y + 4);
+    doc.text("Kos (RM)", colX[2] + 2, y + 4);
+    doc.text("Tolak (RM)", colX[3] + 2, y + 4);
     y += rowHeight;
 
-    if (y > 275) {
-      doc.addPage();
-      y = 15;
+    doc.setTextColor(0, 0, 0);
+    for (let i = 1; i <= 31; i++) {
+      const jualan = document.getElementById(`jualan${i}`).value || "0.00";
+      const kos = document.getElementById(`kos${i}`).value || "0.00";
+      const jumlahSelepasTolak = (parseFloat(jualan) - parseFloat(kos)).toFixed(2);
+      const haribulan = `${i} Haribulan`;
+
+      for (let j = 0; j < 4; j++) doc.rect(colX[j], y, colWidth[j], rowHeight);
+      doc.text(haribulan, colX[0] + 2, y + 4);
+      doc.text(jualan, colX[1] + 2, y + 4);
+      doc.text(kos, colX[2] + 2, y + 4);
+      doc.text(jumlahSelepasTolak, colX[3] + 2, y + 4);
+      y += rowHeight;
+
+      if (y > 275) { doc.addPage(); y = 15; }
     }
+
+    doc.save("resit-jualan.pdf");
+    const notif = document.getElementById('successNotif');
+    notif.style.display = 'block';
+    setTimeout(() => notif.style.display = 'none', 3000);
   }
-
-  doc.save("resit-jualan.pdf");
-
-  const notif = document.getElementById('successNotif');
-  notif.style.display = 'block';
-  setTimeout(() => {
-    notif.style.display = 'none';
-  }, 3000);
-}
-
-
 
   function exportToExcel() {
     let data = [];
     for (let i = 1; i <= 31; i++) {
-      const hari = hariMinggu[(i - 1) % 7];
       const jualan = parseFloat(document.getElementById(`jualan${i}`).value) || 0;
       const kos = parseFloat(document.getElementById(`kos${i}`).value) || 0;
       const jumlahSelepasTolak = jualan - kos;
-      data.push([hari, jualan.toFixed(2), kos.toFixed(2), jumlahSelepasTolak.toFixed(2)]);
+      data.push([`${i} Haribulan`, jualan.toFixed(2), kos.toFixed(2), jumlahSelepasTolak.toFixed(2)]);
     }
 
     const ws = XLSX.utils.aoa_to_sheet([["Hari", "Jumlah Jualan (RM)", "Jumlah Kos (RM)", "Jumlah Selepas Tolak (RM)"], ...data]);
